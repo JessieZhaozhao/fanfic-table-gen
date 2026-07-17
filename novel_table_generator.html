@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>国乙同人文·终极表格生成器</title>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg: #0d0d0d;
+            --surface: #1a1a2e;
+            --surface-2: #16213e;
+            --surface-3: #0f3460;
+            --border: #2a2a4a;
+            --border-focus: #6c5ce7;
+            --text: #e8e8e8;
+            --text-dim: #777;
+            --text-label: #aaa;
+            --accent: #6c5ce7;
+            --accent-hover: #7e6ff0;
+            --success: #00b894;
+            --success-dim: #00b89433;
+            --danger: #e17055;
+            --danger-dim: #e1705533;
+            --tag-a: #ff6b6b;
+            --tag-b: #4ecdc4;
+            --tag-c: #ffe66d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .app { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+        /* Header */
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 24px; margin-bottom: 24px;
+            background: var(--surface); border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 1px; }
+        .header h1 span { color: var(--accent); }
+        .header-actions { display: flex; gap: 10px; }
+
+        /* Buttons */
+        button {
+            padding: 8px 18px; border-radius: 8px; border: none;
+            font-size: 14px; cursor: pointer; font-family: inherit;
+            transition: all 0.15s;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--surface-3); }
+        .btn-sm { padding: 5px 12px; font-size: 12px; background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border); }
+        .btn-sm:hover { color: var(--text); border-color: var(--accent); }
+        .btn-danger { background: var(--danger-dim); color: var(--danger); border: 1px solid transparent; }
+        .btn-danger:hover { border-color: var(--danger); }
+        .btn-icon { background: none; border: none; color: var(--text-dim); font-size: 18px; padding: 4px 8px; }
+        .btn-icon:hover { color: var(--text); }
+
+        /* API Config */
+        .api-config {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; margin-bottom: 20px; overflow: hidden;
+        }
+        .api-config-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 20px; cursor: pointer; background: var(--surface-2);
+            user-select: none;
+        }
+        .api-config-header:hover { background: var(--surface-3); }
+        .api-config-header h3 { font-size: 14px; font-weight: 600; }
+        .api-config-header .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--danger); display: inline-block; margin-right: 8px;
+        }
+        .api-config-header .status-dot.connected { background: var(--success); }
+        .api-config-body { padding: 16px 20px; display: none; }
+        .api-config-body.open { display: block; }
+        .api-row { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-end; }
+        .api-row .form-group { flex: 1; }
+        .api-row .form-group label { font-size: 11px; }
+        .api-row .form-group input { font-size: 13px; width: 100%; }
+        .api-hint { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+        /* AI Button */
+        .btn-ai {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: #fff; border: none; position: relative; overflow: hidden;
+        }
+        .btn-ai:hover { filter: brightness(1.1); }
+        .btn-ai:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+        .btn-ai .spinner {
+            display: inline-block; width: 14px; height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff; border-radius: 50%;
+            animation: spin 0.6s linear infinite; vertical-align: middle;
+            margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Auto-pilot toggle */
+        .auto-pilot-bar {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 20px; margin-top: 10px;
+            background: var(--surface-2); border-radius: 8px;
+            font-size: 13px;
+        }
+        .auto-pilot-bar label {
+            display: flex; align-items: center; gap: 6px; cursor: pointer;
+            font-weight: 600; color: var(--text);
+        }
+        .auto-pilot-bar input[type="checkbox"] { width: auto; accent-color: var(--accent); }
+        .auto-pilot-status {
+            font-size: 12px; color: var(--text-dim);
+        }
+        .auto-pilot-status.active { color: var(--success); }
+        .progress-bar-wrap {
+            flex: 1; height: 6px; background: var(--bg);
+            border-radius: 3px; overflow: hidden; min-width: 80px;
+        }
+        .progress-bar-fill {
+            height: 100%; background: var(--accent); border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        /* Upload */
+        .upload-section { margin-bottom: 24px; }
+        .upload-zone {
+            border: 2px dashed var(--border); border-radius: 12px;
+            padding: 40px 20px; text-align: center; cursor: pointer;
+            transition: all 0.2s; background: var(--surface);
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--accent); background: var(--surface-2);
+        }
+        .upload-zone .icon { font-size: 40px; margin-bottom: 8px; }
+        .upload-zone p { color: var(--text-dim); font-size: 14px; }
+        .upload-zone p.main-text { color: var(--text); font-size: 16px; margin-bottom: 4px; }
+        .upload-alt { text-align: center; margin-top: 10px; }
+
+        /* Form */
+        .form-section { margin-bottom: 24px; }
+        .form-card {
+            background: var(--surface); border-radius: 12px;
+            border: 1px solid var(--border); overflow: hidden;
+        }
+        .form-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 20px; border-bottom: 1px solid var(--border);
+            background: var(--surface-2);
+        }
+        .form-header h2 { font-size: 16px; font-weight: 600; }
+        .form-body { padding: 20px; }
+        .form-footer {
+            padding: 14px 20px; border-top: 1px solid var(--border);
+            display: flex; gap: 10px; justify-content: flex-end;
+            background: var(--surface-2);
+        }
+        .form-row { display: flex; gap: 12px; margin-bottom: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group.flex-2 { flex: 2; }
+        .form-group.flex-1 { flex: 1; }
+        .form-group label {
+            font-size: 12px; color: var(--text-label); font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .form-group .dim { font-weight: 400; text-transform: none; letter-spacing: 0; }
+        input[type="text"], textarea, select {
+            background: var(--bg); color: var(--text);
+            border: 1px solid var(--border); border-radius: 6px;
+            padding: 8px 12px; font-size: 14px; font-family: inherit;
+            transition: border-color 0.15s;
+        }
+        input[type="text"]:focus, textarea:focus, select:focus {
+            outline: none; border-color: var(--border-focus);
+        }
+        textarea { resize: vertical; min-height: 60px; }
+        select { cursor: pointer; }
+
+        /* Six Layers */
+        .section-title {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 12px;
+        }
+        .section-title h3 { font-size: 14px; font-weight: 600; }
+        .layers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .layer-item { display: flex; flex-direction: column; gap: 3px; }
+        .layer-item label { font-size: 11px; color: var(--text-dim); }
+        .layer-item input { font-size: 13px; }
+
+        /* Options */
+        .options-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+        .option-item { display: flex; gap: 8px; align-items: center; }
+        .option-item label {
+            min-width: 100px; font-size: 12px; font-weight: 600; text-align: right;
+        }
+        .option-item label.opt-a { color: var(--tag-a); }
+        .option-item label.opt-b { color: var(--tag-b); }
+        .option-item label.opt-c { color: var(--tag-c); }
+        .option-item input { flex: 1; }
+
+        /* Hint */
+        .hint {
+            font-size: 11px; color: var(--text-dim); line-height: 1.4;
+            background: var(--surface-2); padding: 8px 12px; border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        /* Novel List */
+        .list-section { margin-bottom: 40px; }
+        .list-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 12px;
+        }
+        .list-header h2 { font-size: 16px; }
+        .badge {
+            background: var(--accent); color: #fff; font-size: 11px;
+            padding: 2px 8px; border-radius: 10px; margin-left: 6px;
+        }
+        .novel-list { display: flex; flex-direction: column; gap: 10px; }
+        .novel-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 10px; overflow: hidden;
+        }
+        .novel-card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 16px; cursor: pointer; background: var(--surface-2);
+        }
+        .novel-card-header:hover { background: var(--surface-3); }
+        .novel-card-title { font-size: 14px; font-weight: 600; }
+        .novel-card-meta { font-size: 12px; color: var(--text-dim); }
+        .novel-card-actions { display: flex; gap: 6px; }
+        .novel-card-body { padding: 16px; display: none; }
+        .novel-card-body.open { display: block; }
+        .novel-field { margin-bottom: 12px; }
+        .novel-field-label {
+            font-size: 11px; color: var(--text-dim); text-transform: uppercase;
+            letter-spacing: 0.5px; margin-bottom: 4px;
+        }
+        .novel-field-content {
+            font-size: 13px; line-height: 1.5;
+            background: var(--bg); padding: 10px 12px; border-radius: 6px;
+            white-space: pre-wrap; word-break: break-all;
+            max-height: 150px; overflow-y: auto;
+        }
+        .novel-field-content.short { max-height: 60px; }
+        .empty-state {
+            text-align: center; padding: 40px 20px;
+            color: var(--text-dim); font-size: 14px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; width: 90%; max-width: 700px;
+            max-height: 80vh; overflow-y: auto;
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 20px; border-bottom: 1px solid var(--border);
+        }
+        .modal-header h3 { font-size: 16px; }
+        .modal-body { padding: 20px; }
+        .modal-body textarea { width: 100%; }
+        .modal-footer {
+            padding: 14px 20px; border-top: 1px solid var(--border);
+            display: flex; gap: 10px; justify-content: flex-end;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 20px; right: 20px;
+            padding: 12px 20px; border-radius: 8px;
+            font-size: 14px; z-index: 2000;
+            animation: slideIn 0.3s, fadeOut 0.3s 2.5s forwards;
+        }
+        .toast-success { background: var(--success); color: #fff; }
+        .toast-error { background: var(--danger); color: #fff; }
+        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; } }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* Responsive */
+        @media (max-width: 700px) {
+            .form-row { flex-direction: column; }
+            .layers-grid { grid-template-columns: 1fr; }
+            .option-item { flex-direction: column; align-items: flex-start; }
+            .option-item label { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <!-- Header -->
+    <header class="header">
+        <h1>国乙同人文·<span>终极表格</span>生成器</h1>
+        <div class="header-actions">
+            <button class="btn-sm" onclick="importJson()">📦 导入JSON</button>
+            <button class="btn-sm" onclick="exportJson()">💾 导出JSON</button>
+            <button class="btn-secondary" onclick="importXlsx()">📂 导入xlsx</button>
+            <button class="btn-primary" id="btnExport" onclick="exportXlsx()" disabled>📥 导出Excel</button>
+        </div>
+    </header>
+
+    <!-- API Config -->
+    <section class="api-config">
+        <div class="api-config-header" onclick="toggleApiConfig()">
+            <h3><span class="status-dot" id="apiStatusDot"></span>大模型 API 配置</h3>
+            <span id="apiConfigArrow">▼</span>
+        </div>
+        <div class="api-config-body" id="apiConfigBody">
+            <div class="api-row">
+                <div class="form-group" style="flex:2">
+                    <label>API Base URL</label>
+                    <input type="text" id="apiEndpoint" placeholder="https://api.deepseek.com/v1" oninput="saveApiConfig()">
+                    <div class="api-hint">只填到 /v1 即可（如 https://api.deepseek.com/v1），/chat/completions 自动补全</div>
+                </div>
+                <div class="form-group" style="flex:1">
+                    <label>模型</label>
+                    <input type="text" id="apiModel" placeholder="gpt-4o / deepseek-chat / moonshot-v1-8k" oninput="saveApiConfig()">
+                </div>
+            </div>
+            <div class="api-row">
+                <div class="form-group" style="flex:2">
+                    <label>API Key</label>
+                    <input type="text" id="apiKey" placeholder="sk-..." oninput="saveApiConfig()" style="font-family:monospace">
+                </div>
+                <div class="form-group" style="flex:0 0 auto">
+                    <label>&nbsp;</label>
+                    <button class="btn-sm" onclick="testApiConnection()" id="btnTestApi">🔌 测试连接</button>
+                </div>
+            </div>
+            <div class="api-row">
+                <div class="form-group" style="flex:1">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                        <input type="checkbox" id="apiUseProxy" onchange="saveApiConfig()" style="width:auto">
+                        本地代理（解决 CORS 跨域）
+                    </label>
+                    <input type="text" id="apiProxyAddr" placeholder="http://localhost:8787/proxy" oninput="saveApiConfig()">
+                    <div class="api-hint">勾选后请求经本地代理转发，避免浏览器 CORS 拦截。运行 <code>node api_proxy.js</code> 启动代理</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Upload -->
+    <section class="upload-section">
+        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <div class="icon">📄</div>
+            <p class="main-text">拖拽 .docx 文件到这里</p>
+            <p>或点击选择文件 · 支持多文件批量上传</p>
+            <input type="file" id="fileInput" accept=".docx" multiple hidden>
+        </div>
+        <div class="auto-pilot-bar">
+            <label>
+                <input type="checkbox" id="autoPilot" checked>
+                🚀 拖拽自动分析
+            </label>
+            <span class="auto-pilot-status" id="autoPilotStatus">拖入文件后自动 AI 分析并保存</span>
+            <div class="progress-bar-wrap" id="progressWrap" style="display:none">
+                <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+            </div>
+        </div>
+        <div class="upload-alt">
+            <button class="btn-sm" onclick="showManualInput()">✏️ 手动粘贴内容</button>
+        </div>
+    </section>
+
+    <!-- Edit Form -->
+    <section class="form-section" id="formSection" style="display:none">
+        <div class="form-card">
+            <div class="form-header">
+                <h2 id="formTitle">编辑小说信息</h2>
+                <button class="btn-icon" onclick="closeForm()">✕</button>
+            </div>
+            <div class="form-body">
+                <!-- Row 1 -->
+                <div class="form-row">
+                    <div class="form-group flex-2">
+                        <label>标题</label>
+                        <input type="text" id="fTitle" placeholder="小说标题">
+                    </div>
+                    <div class="form-group flex-1">
+                        <label>角色</label>
+                        <select id="fChar" onchange="onFieldChange()"></select>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label>游戏</label>
+                        <input type="text" id="fGame" readonly placeholder="自动匹配">
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="form-group" style="margin-bottom:20px">
+                    <label>正文 <span class="dim">(已自动清洗，可编辑)</span></label>
+                    <textarea id="fContent" rows="6" placeholder="小说正文内容"></textarea>
+                </div>
+
+                <!-- Six Layers -->
+                <div style="margin-bottom:20px">
+                    <div class="section-title">
+                        <h3>六层梗分析</h3>
+                        <div style="display:flex;gap:6px">
+                            <button class="btn-ai btn-sm" id="btnAiAnalyze" onclick="aiAutoAnalyze()">🤖 AI自动分析</button>
+                            <button class="btn-sm" onclick="generatePrompt()">📋 生成提示词</button>
+                            <button class="btn-sm" onclick="showPasteAIModal()">🧠 粘贴AI回复</button>
+                        </div>
+                    </div>
+                    <div class="layers-grid">
+                        <div class="layer-item">
+                            <label>第一层·噱头层</label>
+                            <input type="text" id="fL1" placeholder="如：灯语传情+追悼会醋意">
+                        </div>
+                        <div class="layer-item">
+                            <label>第二层·世界观层</label>
+                            <input type="text" id="fL2" placeholder="如：现代都市/灵异">
+                        </div>
+                        <div class="layer-item">
+                            <label>第三层·人设层</label>
+                            <input type="text" id="fL3" placeholder="如：鬼魂养侄/寡姑姑/醋精亡灵">
+                        </div>
+                        <div class="layer-item">
+                            <label>第四层·情节层</label>
+                            <input type="text" id="fL4" placeholder="如：死亡+灯语传信+追悼会守护">
+                        </div>
+                        <div class="layer-item">
+                            <label>第五层·情绪层</label>
+                            <input type="text" id="fL5" placeholder="如：丧亲虐+守护甜+醋意爽">
+                        </div>
+                        <div class="layer-item">
+                            <label>第六层·结局层</label>
+                            <input type="text" id="fL6" placeholder="如：阴阳相守">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Options -->
+                <div style="margin-bottom:20px">
+                    <div class="section-title">
+                        <h3>文游选项</h3>
+                    </div>
+                    <div class="hint">
+                        不是具体动作（如"拿钥匙"），而是玩家面对场景时的不同应对方式，对应不同受众的XP和代入感。
+                        例：A．果断照正确方法再逃一次 / B．先发制人发脾气指出越界 / C．主动留下示弱
+                    </div>
+                    <div class="options-grid">
+                        <div class="option-item">
+                            <label class="opt-a">A · 主动进攻型</label>
+                            <input type="text" id="fOptA" placeholder="玩家主动、大胆、推进关系的应对方式">
+                        </div>
+                        <div class="option-item">
+                            <label class="opt-b">B · 退缩防御型</label>
+                            <input type="text" id="fOptB" placeholder="玩家退缩、回避、防御的应对方式">
+                        </div>
+                        <div class="option-item">
+                            <label class="opt-c">C · 暧昧挑逗型</label>
+                            <input type="text" id="fOptC" placeholder="玩家暧昧、挑逗、试探的应对方式">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Promo (auto) -->
+                <div class="form-group">
+                    <label>引流文案+tag <span class="dim">(已自动生成，可编辑)</span></label>
+                    <textarea id="fPromo" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="form-footer">
+                <button class="btn-secondary" onclick="closeForm()">取消</button>
+                <button class="btn-primary" id="btnAdd" onclick="saveNovel()">✅ 添加到表格</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Novel List -->
+    <section class="list-section">
+        <div class="list-header">
+            <h2>已添加 <span id="novelCount" class="badge">0</span></h2>
+            <div style="display:flex;gap:8px">
+                <span id="queueBadge" class="badge" style="display:none;background:var(--tag-c);color:#333">队列: 0</span>
+                <button class="btn-sm btn-danger" onclick="clearAll()">🗑️ 清空</button>
+            </div>
+        </div>
+        <div id="novelList" class="novel-list">
+            <div class="empty-state">上传 docx 或手动输入来添加小说</div>
+        </div>
+    </section>
+</div>
+
+<script>
+// ================================================
+// API Config Management
+// ================================================
+const API_STORAGE_KEY = 'novel_gen_api_config';
+
+function loadApiConfig() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(API_STORAGE_KEY) || '{}');
+        if (saved.endpoint) document.getElementById('apiEndpoint').value = saved.endpoint;
+        if (saved.model) document.getElementById('apiModel').value = saved.model;
+        if (saved.key) document.getElementById('apiKey').value = saved.key;
+        if (saved.useProxy) document.getElementById('apiUseProxy').checked = true;
+        if (saved.proxyAddr) document.getElementById('apiProxyAddr').value = saved.proxyAddr;
+        updateApiStatusDot();
+    } catch (e) {}
+}
+
+function saveApiConfig() {
+    const config = {
+        endpoint: document.getElementById('apiEndpoint').value.trim(),
+        model: document.getElementById('apiModel').value.trim(),
+        key: document.getElementById('apiKey').value.trim(),
+        useProxy: document.getElementById('apiUseProxy').checked,
+        proxyAddr: document.getElementById('apiProxyAddr').value.trim(),
+    };
+    localStorage.setItem(API_STORAGE_KEY, JSON.stringify(config));
+    updateApiStatusDot();
+}
+
+function getApiConfig() {
+    try {
+        return JSON.parse(localStorage.getItem(API_STORAGE_KEY) || '{}');
+    } catch (e) { return {}; }
+}
+
+function updateApiStatusDot() {
+    const dot = document.getElementById('apiStatusDot');
+    const cfg = getApiConfig();
+    if (cfg.endpoint && cfg.key) {
+        dot.classList.add('connected');
+    } else {
+        dot.classList.remove('connected');
+    }
+}
+
+function toggleApiConfig() {
+    const body = document.getElementById('apiConfigBody');
+    const arrow = document.getElementById('apiConfigArrow');
+    if (body.classList.contains('open')) {
+        body.classList.remove('open');
+        arrow.textContent = '▼';
+    } else {
+        body.classList.add('open');
+        arrow.textContent = '▲';
+    }
+}
+
+async function testApiConnection() {
+    const cfg = getApiConfig();
+    if (!cfg.endpoint || !cfg.key) {
+        toast('请先填写 API 地址和 Key', 'error');
+        return;
+    }
+    const btn = document.getElementById('btnTestApi');
+    btn.disabled = true;
+    btn.textContent = '⏳ 测试中...';
+    try {
+        const data = await fetchApi(cfg, {
+            model: cfg.model || 'gpt-4o',
+            messages: [{ role: 'user', content: '回复"连接成功"四个字' }],
+            max_tokens: 20,
+        });
+        toast('✅ 连接成功！', 'success');
+    } catch (e) {
+        toast(e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🔌 测试连接';
+    }
+}
+
+/**
+ * 通用 API 调用方法 — 自动处理代理/CORS/错误
+ * @param {object} cfg - API 配置 (endpoint, key, useProxy, proxyAddr)
+ * @param {object} body - 请求体 (model, messages, ...)
+ * @returns {object} - API 返回的 JSON
+ */
+/**
+ * 将 Base URL 转为完整接口地址
+ * 输入: https://api.deepseek.com/v1
+ * 输出: https://api.deepseek.com/v1/chat/completions
+ */
+function resolveApiEndpoint(baseURL) {
+    let url = baseURL.trim();
+    // 去掉末尾斜杠
+    if (url.endsWith('/')) url = url.slice(0, -1);
+    // 如果已经包含 /chat/completions 就直接用
+    if (url.includes('chat/completions')) return url;
+    return url + '/chat/completions';
+}
+
+async function fetchApi(cfg, body) {
+    if (!cfg.endpoint) throw new Error('未配置 API 地址');
+    if (!cfg.key) throw new Error('未配置 API Key');
+
+    const fullUrl = resolveApiEndpoint(cfg.endpoint);
+    const useProxy = cfg.useProxy;
+    const proxyAddr = cfg.proxyAddr || 'http://localhost:8787/proxy';
+    let fetchURL, fetchHeaders, fetchBody;
+
+    if (useProxy) {
+        // 通过本地代理转发
+        fetchURL = proxyAddr;
+        fetchHeaders = {
+            'Content-Type': 'application/json',
+            'X-Target-URL': fullUrl,
+            'X-API-Key': cfg.key,
+        };
+        fetchBody = JSON.stringify(body);
+    } else {
+        // 直接请求（可能被 CORS 拦截）
+        fetchURL = fullUrl;
+        fetchHeaders = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${cfg.key}`,
+        };
+        fetchBody = JSON.stringify(body);
+    }
+
+    let res;
+    try {
+        res = await fetch(fetchURL, {
+            method: 'POST',
+            headers: fetchHeaders,
+            body: fetchBody,
+        });
+    } catch (e) {
+        // fetch 本身抛错 = 网络/CORS 问题
+        if (useProxy) {
+            throw new Error(`代理连接失败 (${proxyAddr})，请确认已运行 node api_proxy.js`);
+        } else {
+            throw new Error(`连接失败（可能是 CORS 跨域限制）: ${e.message}。请勾选「本地代理」并运行 node api_proxy.js`);
+        }
+    }
+
+    if (!res.ok) {
+        let errText = '';
+        try { errText = await res.text(); } catch (_) {}
+        const snippet = errText.substring(0, 200);
+        if (res.status === 401 || res.status === 403) {
+            throw new Error(`认证失败 (${res.status})，请检查 API Key。${snippet}`);
+        }
+        if (res.status === 404) {
+            throw new Error(`接口不存在 (404)，请检查 API 地址是否正确。${snippet}`);
+        }
+        throw new Error(`API 报错 (${res.status}): ${snippet}`);
+    }
+
+    const data = await res.json();
+    return data;
+}
+
+/**
+ * 从 API 返回的 JSON 中提取文本内容
+ */
+function extractAiText(data) {
+    // OpenAI standard format
+    if (data.choices && data.choices[0]) {
+        return data.choices[0].message?.content || data.choices[0].text || '';
+    }
+    // Some providers
+    if (data.response) return data.response;
+    if (data.result) return data.result;
+    if (typeof data === 'string') return data;
+    return '';
+}
+
+// ================================================
+// AI Auto Analysis
+// ================================================
+let aiAnalyzing = false;
+
+function buildAnalysisPrompt(title, char, game, content) {
+    const contentSnippet = content.length > 2000
+        ? content.substring(0, 2000) + '…（全文' + content.length + '字）'
+        : content;
+
+    return `你是国乙同人文分析专家。请阅读以下小说，按指定格式输出分析结果。
+
+【小说信息】
+标题：${title}
+游戏：${game || '未知'}
+主角：${char || '未知'}
+
+【小说正文】
+${contentSnippet}
+
+【输出格式】请严格按以下格式输出，不要加额外解释：
+
+六层梗分析：
+噱头层：[短语概括，用+连接并列元素]
+世界观层：[背景设定]
+人设层：[角色定位，用/分隔]
+情节层：[关键节点，用+连接]
+情绪层：[情绪体验，用+连接]
+结局层：[结局走向]
+
+文游选项：
+A. [主动进攻型 — 玩家主动大胆推进关系的应对方式，不是具体动作]
+B. [退缩防御型 — 玩家退缩回避防御的应对方式]
+C. [暧昧挑逗型 — 玩家暧昧挑逗试探的应对方式]
+
+注意：选项不是"拿钥匙""扔钥匙"这种具体动作，而是玩家面对这个场景时的不同应对方式，对应不同受众的XP和代入感。`;
+}
+
+async function aiAutoAnalyze() {
+    if (aiAnalyzing) return;
+
+    const cfg = getApiConfig();
+    if (!cfg.endpoint || !cfg.key) {
+        toast('请先在顶部配置 API 地址和 Key', 'error');
+        // Auto-open config panel
+        const body = document.getElementById('apiConfigBody');
+        if (!body.classList.contains('open')) toggleApiConfig();
+        return;
+    }
+
+    const content = document.getElementById('fContent').value.trim();
+    if (!content) {
+        toast('请先输入正文内容', 'error');
+        return;
+    }
+
+    const title = document.getElementById('fTitle').value.trim() || '未命名';
+    const char = document.getElementById('fChar').value;
+    const game = document.getElementById('fGame').value;
+    const prompt = buildAnalysisPrompt(title, char, game, content);
+
+    const btn = document.getElementById('btnAiAnalyze');
+    aiAnalyzing = true;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>分析中...';
+
+    try {
+        const data = await fetchApi(cfg, {
+            model: cfg.model || 'gpt-4o',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.7,
+        });
+
+        const aiText = extractAiText(data);
+        if (!aiText) {
+            throw new Error('API 返回内容为空，格式: ' + JSON.stringify(data).substring(0, 200));
+        }
+
+        parseAIResponse(aiText);
+        toast('AI 分析完成，已自动填入', 'success');
+
+    } catch (e) {
+        toast('AI 分析失败: ' + e.message, 'error');
+    } finally {
+        aiAnalyzing = false;
+        btn.disabled = false;
+        btn.innerHTML = '🤖 AI自动分析';
+    }
+}
+
+// ================================================
+// Constants
+// ================================================
+const GAME_CHARACTER_MAP = {
+    "恋与制作人": ["李泽言","许墨","白起","周棋洛"],
+    "光与夜之恋": ["陆沉","齐司礼","萧逸","查理苏","夏鸣星"],
+    "未定事件簿": ["左然","莫弈","夏彦","陆景和"],
+    "时空中的绘旅人": ["叶瑄","司岚","路辰","罗夏","艾因"],
+    "恋与深空": ["秦彻","祁煜","沈星回","黎深","夏以昼"],
+    "世界之外": ["柏源","夏萧因","易遇","顾时夜"],
+};
+const CHAR_TO_GAME = {};
+for (const [game, chars] of Object.entries(GAME_CHARACTER_MAP)) {
+    for (const c of chars) CHAR_TO_GAME[c] = game;
+}
+const SORTED_CHARS = Object.keys(CHAR_TO_GAME).sort((a, b) => b.length - a.length);
+const REMINDER_TEXT = "提醒一下宝宝们不用蹲，后续4连进群⬇️自取就可以啦~不会在这里更新哦 ᗜ ‸ ᗜ";
+const SEP_RE = /^-{3,}$/;
+const TAG_RE = /^#[^\s]+(\s+#[^\s]+)*$/;
+// ================================================
+// State
+// ================================================
+let novels = [];
+let editingIndex = -1; // -1 = adding new
+
+// ================================================
+// Character Detection
+// ================================================
+function detectChar(title) {
+    for (const ch of SORTED_CHARS) {
+        if (title.includes(ch)) return { char: ch, game: CHAR_TO_GAME[ch] };
+    }
+    return { char: null, game: null };
+}
+
+// ================================================
+// Content Cleaning
+// ================================================
+/**
+ * 去除正文开头的标题重复部分
+ * 例：title="当你带着个孩子去找夏以昼"
+ *     content="当你带着个孩子去找夏以昼\n123..."
+ *   → "123..."
+ */
+function stripTitleFromContent(title, content) {
+    if (!title || !content) return content;
+    const t = title.trim();
+    // 尝试精确匹配：正文以标题开头（可能后跟换行或空格）
+    let re = new RegExp('^' + escapeRegExp(t) + '[\\s\\n]+');
+    let result = content.replace(re, '');
+    // 如果没匹配到，尝试宽松匹配（忽略首行前后空白）
+    if (result === content) {
+        const firstLine = content.split('\n')[0].trim();
+        if (firstLine === t || firstLine.startsWith(t)) {
+            const lines = content.split('\n');
+            lines[0] = lines[0].replace(new RegExp('^' + escapeRegExp(t) + '\\s*'), '').trim();
+            // 如果首行清空了就移除
+            if (!lines[0]) lines.shift();
+            result = lines.join('\n');
+        }
+    }
+    return result;
+}
+
+function escapeRegExp(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function cleanContent(raw) {
+    const lines = raw.split('\n');
+    const rm = new Set();
+    let i = lines.length - 1;
+    while (i >= 0 && lines[i].trim() === '') { rm.add(i); i--; }
+    if (i >= 0 && TAG_RE.test(lines[i].trim())) { rm.add(i); i--; }
+    while (i >= 0 && lines[i].trim() === '') { rm.add(i); i--; }
+    if (i >= 0 && lines[i].includes(REMINDER_TEXT)) { rm.add(i); i--; }
+    while (i >= 0 && lines[i].trim() === '') { rm.add(i); i--; }
+    if (i >= 0 && SEP_RE.test(lines[i].trim())) { rm.add(i); i--; }
+    while (i >= 0 && lines[i].trim() === '') { rm.add(i); i--; }
+    return lines.filter((_, idx) => !rm.has(idx)).join('\n').replace(/\n+$/, '');
+}
+
+// ================================================
+// Promo Generation
+// ================================================
+function generatePromo(charName, gameName) {
+    if (!charName || !gameName) return '未完待续，一键四连，点赞催更~#同人文 #bg #同人产粮节';
+    return `未完待续，一键四连，点赞催更~#${gameName} #${charName} #${charName}X你 #同人文 #bg #同人产粮节`;
+}
+
+// ================================================
+// Build Column Values
+// ================================================
+function buildColumnA(gameName, layers) {
+    let s = `世界观 ${gameName || '未知'}同人`;
+    const labels = ['第一层·噱头层','第二层·世界观层','第三层·人设层','第四层·情节层','第五层·情绪层','第六层·结局层'];
+    for (let i = 0; i < 6; i++) {
+        if (layers[i]) s += `\n${labels[i]}：${layers[i]}`;
+    }
+    return s;
+}
+function buildColumnE(optA, optB, optC) {
+    let s = '【你的选择】';
+    if (optA) s += `\nA. ${optA}`;
+    if (optB) s += `\nB. ${optB}`;
+    if (optC) s += `\nC. ${optC}`;
+    return s;
+}
+
+// ================================================
+// Populate Char Dropdown
+// ================================================
+function populateCharDropdown() {
+    const sel = document.getElementById('fChar');
+    sel.innerHTML = '<option value="">— 自动检测 —</option>';
+    for (const [game, chars] of Object.entries(GAME_CHARACTER_MAP)) {
+        const group = document.createElement('optgroup');
+        group.label = game;
+        for (const c of chars) {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            group.appendChild(opt);
+        }
+        sel.appendChild(group);
+    }
+}
+
+// ================================================
+// File Upload
+// ================================================
+function initUpload() {
+    const zone = document.getElementById('dropZone');
+    const input = document.getElementById('fileInput');
+
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', e => {
+        e.preventDefault(); zone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+    input.addEventListener('change', e => handleFiles(e.target.files));
+}
+
+let uploadQueue = [];
+let autoProcessing = false; // 正在自动处理中
+
+async function handleFiles(files) {
+    const autoMode = document.getElementById('autoPilot').checked;
+
+    for (const file of files) {
+        if (!file.name.endsWith('.docx')) {
+            toast('只支持 .docx 文件: ' + file.name, 'error');
+            continue;
+        }
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            const title = file.name.replace(/\.docx$/, '');
+            const rawContent = result.value;
+            const { char, game } = detectChar(title);
+            const cleaned = cleanContent(rawContent);
+            uploadQueue.push({ title, char, game, content: cleaned });
+        } catch (err) {
+            toast('读取失败: ' + err.message, 'error');
+        }
+    }
+
+    updateQueueBadge();
+
+    if (uploadQueue.length === 0) return;
+
+    if (autoMode) {
+        // 自动模式：启动自动流水线
+        if (!autoProcessing) {
+            autoProcessing = true;
+            await autoProcessQueue();
+            autoProcessing = false;
+        }
+        // 如果已在处理中，新文件加入队列后会自动被处理
+    } else {
+        // 手动模式：打开第一篇的表单，其余排队
+        if (document.getElementById('formSection').style.display === 'none') {
+            const next = uploadQueue.shift();
+            updateQueueBadge();
+            showForm(next);
+            toast('已读取: ' + next.title, 'success');
+        }
+    }
+}
+
+// ================================================
+// Auto-Pilot: 全自动处理队列
+// ================================================
+async function autoProcessQueue() {
+    const total = uploadQueue.length;
+    const cfg = getApiConfig();
+    const hasApi = cfg.endpoint && cfg.key;
+
+    if (!hasApi) {
+        toast('请先配置 API 才能自动分析', 'error');
+        // 降级到手动模式：打开第一篇
+        if (uploadQueue.length > 0) {
+            const next = uploadQueue.shift();
+            updateQueueBadge();
+            showForm(next);
+        }
+        return;
+    }
+
+    const statusEl = document.getElementById('autoPilotStatus');
+    const progressWrap = document.getElementById('progressWrap');
+    const progressFill = document.getElementById('progressFill');
+    progressWrap.style.display = 'block';
+
+    let processed = 0;
+    let failed = 0;
+
+    while (uploadQueue.length > 0) {
+        const item = uploadQueue.shift();
+        processed++;
+        const pct = Math.round((processed / total) * 100);
+        progressFill.style.width = pct + '%';
+        statusEl.textContent = `分析中 ${processed}/${total}: ${item.title}`;
+        statusEl.classList.add('active');
+
+        try {
+            // 1. 调用 AI 分析
+            const prompt = buildAnalysisPrompt(item.title, item.char, item.game, item.content);
+            const data = await fetchApi(cfg, {
+                model: cfg.model || 'gpt-4o',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.7,
+            });
+
+            const aiText = extractAiText(data);
+            if (!aiText) {
+                throw new Error('API 返回为空');
+            }
+
+            // 2. 解析 AI 回复
+            const parsed = parseAIResponseToData(aiText);
+            const layers = parsed ? parsed.layers : ['', '', '', '', '', ''];
+            const optA = parsed ? parsed.optA : '';
+            const optB = parsed ? parsed.optB : '';
+            const optC = parsed ? parsed.optC : '';
+
+            // 3. 构建 novel 对象并保存
+            const novel = {
+                title: item.title,
+                char: item.char,
+                game: item.game,
+                content: item.content,
+                columnA: buildColumnA(item.game, layers),
+                columnB: item.title,
+                columnC: stripTitleFromContent(item.title, item.content),
+                columnD: generatePromo(item.char, item.game),
+                columnE: buildColumnE(optA, optB, optC),
+            };
+            novels.push(novel);
+
+        } catch (e) {
+            failed++;
+            // 分析失败时也保存（只带基本信息，不带梗和选项）
+            novels.push({
+                title: item.title,
+                char: item.char,
+                game: item.game,
+                content: item.content,
+                columnA: buildColumnA(item.game, ['', '', '', '', '', '']),
+                columnB: item.title,
+                columnC: stripTitleFromContent(item.title, item.content),
+                columnD: generatePromo(item.char, item.game),
+                columnE: '',
+            });
+            console.warn('AI 分析失败: ' + item.title, e.message);
+        }
+
+        updateQueueBadge();
+        renderList();
+    }
+
+    // 完成
+    progressFill.style.width = '100%';
+    statusEl.textContent = failed > 0
+        ? `完成! 成功 ${total - failed} 篇，失败 ${failed} 篇`
+        : `全部完成! 共 ${total} 篇`;
+    setTimeout(() => {
+        progressWrap.style.display = 'none';
+        progressFill.style.width = '0%';
+        statusEl.textContent = '拖入文件后自动 AI 分析并保存';
+        statusEl.classList.remove('active');
+    }, 4000);
+
+    toast(`批量处理完成: ${total - failed}/${total} 成功`, failed > 0 ? 'error' : 'success');
+}
+
+// After saving a novel manually, process next in queue (manual mode)
+function processNextInQueue() {
+    if (uploadQueue.length > 0) {
+        const autoMode = document.getElementById('autoPilot').checked;
+        if (autoMode) {
+            autoProcessQueue();
+        } else {
+            const next = uploadQueue.shift();
+            updateQueueBadge();
+            showForm(next);
+            toast('处理下一个: ' + next.title, 'success');
+        }
+    }
+}
+
+// ================================================
+// Manual Input
+// ================================================
+function showManualInput() {
+    showForm({ title: '', char: null, game: null, content: '' });
+}
+
+// ================================================
+// Form Management
+// ================================================
+function showForm(data) {
+    editingIndex = -1;
+    document.getElementById('formTitle').textContent = '添加小说';
+    document.getElementById('btnAdd').textContent = '✅ 添加到表格';
+    document.getElementById('fTitle').value = data.title || '';
+    document.getElementById('fChar').value = data.char || '';
+    document.getElementById('fGame').value = data.game || '';
+    document.getElementById('fContent').value = data.content || '';
+    // Clear layers
+    for (let i = 1; i <= 6; i++) document.getElementById('fL' + i).value = '';
+    // Clear options
+    document.getElementById('fOptA').value = '';
+    document.getElementById('fOptB').value = '';
+    document.getElementById('fOptC').value = '';
+    // Auto promo
+    document.getElementById('fPromo').value = generatePromo(data.char, data.game);
+    document.getElementById('formSection').style.display = 'block';
+    document.getElementById('formSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+function editNovel(idx) {
+    const n = novels[idx];
+    editingIndex = idx;
+    document.getElementById('formTitle').textContent = '编辑小说';
+    document.getElementById('btnAdd').textContent = '💾 保存修改';
+    document.getElementById('fTitle').value = n.title;
+    document.getElementById('fChar').value = n.char || '';
+    document.getElementById('fGame').value = n.game || '';
+    document.getElementById('fContent').value = n.content;
+    // Parse layers from columnA
+    const layerLines = (n.columnA || '').split('\n');
+    const layerVals = ['', '', '', '', '', ''];
+    const layerKeys = ['噱头层','世界观层','人设层','情节层','情绪层','结局层'];
+    layerLines.forEach(line => {
+        for (let i = 0; i < layerKeys.length; i++) {
+            if (line.includes(layerKeys[i] + '：')) {
+                layerVals[i] = line.split(layerKeys[i] + '：')[1] || '';
+            }
+        }
+    });
+    for (let i = 0; i < 6; i++) document.getElementById('fL' + (i + 1)).value = layerVals[i];
+    // Parse options from columnE
+    const optLines = (n.columnE || '').split('\n');
+    optLines.forEach(line => {
+        if (/^[A]\.\s/.test(line)) document.getElementById('fOptA').value = line.replace(/^[A]\.\s*/, '');
+        if (/^[B]\.\s/.test(line)) document.getElementById('fOptB').value = line.replace(/^[B]\.\s*/, '');
+        if (/^[C]\.\s/.test(line)) document.getElementById('fOptC').value = line.replace(/^[C]\.\s*/, '');
+    });
+    document.getElementById('fPromo').value = n.columnD || '';
+    document.getElementById('formSection').style.display = 'block';
+    document.getElementById('formSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+function closeForm() {
+    document.getElementById('formSection').style.display = 'none';
+    editingIndex = -1;
+}
+
+function onFieldChange() {
+    const char = document.getElementById('fChar').value;
+    const game = CHAR_TO_GAME[char] || '';
+    document.getElementById('fGame').value = game;
+    document.getElementById('fPromo').value = generatePromo(char, game);
+}
+
+// Also update promo when char dropdown changes
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('fChar').addEventListener('change', onFieldChange);
+    // Also detect from title on blur
+    document.getElementById('fTitle').addEventListener('blur', () => {
+        const title = document.getElementById('fTitle').value;
+        const { char, game } = detectChar(title);
+        if (char && !document.getElementById('fChar').value) {
+            document.getElementById('fChar').value = char;
+            document.getElementById('fGame').value = game;
+            document.getElementById('fPromo').value = generatePromo(char, game);
+        }
+    });
+});
+
+// ================================================
+// Save Novel
+// ================================================
+function saveNovel() {
+    const title = document.getElementById('fTitle').value.trim();
+    const char = document.getElementById('fChar').value;
+    const game = document.getElementById('fGame').value;
+    const content = document.getElementById('fContent').value.trim();
+    const layers = [];
+    for (let i = 1; i <= 6; i++) layers.push(document.getElementById('fL' + i).value.trim());
+    const optA = document.getElementById('fOptA').value.trim();
+    const optB = document.getElementById('fOptB').value.trim();
+    const optC = document.getElementById('fOptC').value.trim();
+    const promo = document.getElementById('fPromo').value.trim();
+
+    if (!title) { toast('请输入标题', 'error'); return; }
+    if (!content) { toast('请输入正文', 'error'); return; }
+
+    const novel = {
+        title, char, game, content,
+        columnA: buildColumnA(game, layers),
+        columnB: title,
+        columnC: stripTitleFromContent(title, content),
+        columnD: promo,
+        columnE: buildColumnE(optA, optB, optC),
+    };
+
+    if (editingIndex >= 0) {
+        novels[editingIndex] = novel;
+        toast('已更新: ' + title, 'success');
+    } else {
+        novels.push(novel);
+        toast('已添加: ' + title, 'success');
+    }
+    closeForm();
+    renderList();
+    // Process next file in upload queue
+    processNextInQueue();
+}
+
+// ================================================
+// Delete Novel
+// ================================================
+function deleteNovel(idx) {
+    if (!confirm(`确认删除「${novels[idx].title}」？`)) return;
+    novels.splice(idx, 1);
+    renderList();
+    toast('已删除', 'success');
+}
+
+function clearAll() {
+    if (novels.length === 0) return;
+    if (!confirm(`确认清空全部 ${novels.length} 篇小说？此操作不可恢复。`)) return;
+    novels = [];
+    uploadQueue = [];
+    renderList();
+    updateQueueBadge();
+    toast('已清空', 'success');
+}
+
+function updateQueueBadge() {
+    const badge = document.getElementById('queueBadge');
+    if (uploadQueue.length > 0) {
+        badge.style.display = 'inline';
+        badge.textContent = '队列: ' + uploadQueue.length;
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+// ================================================
+// Render List
+// ================================================
+function renderList() {
+    const container = document.getElementById('novelList');
+    const count = document.getElementById('novelCount');
+    const btnExport = document.getElementById('btnExport');
+    count.textContent = novels.length;
+    btnExport.disabled = novels.length === 0;
+
+    if (novels.length === 0) {
+        container.innerHTML = '<div class="empty-state">上传 docx 或手动输入来添加小说</div>';
+        return;
+    }
+
+    container.innerHTML = novels.map((n, i) => `
+        <div class="novel-card">
+            <div class="novel-card-header" onclick="toggleCard(${i})">
+                <div>
+                    <span class="novel-card-title">${esc(n.title)}</span>
+                    <span class="novel-card-meta"> · ${n.game || '未匹配'} · ${n.char || ''}</span>
+                </div>
+                <div class="novel-card-actions">
+                    <button class="btn-sm" onclick="event.stopPropagation();editNovel(${i})">编辑</button>
+                    <button class="btn-sm btn-danger" onclick="event.stopPropagation();deleteNovel(${i})">删除</button>
+                    <span class="btn-icon" id="arrow${i}">▼</span>
+                </div>
+            </div>
+            <div class="novel-card-body" id="cardBody${i}">
+                <div class="novel-field">
+                    <div class="novel-field-label">A · 洗后梗</div>
+                    <div class="novel-field-content">${esc(n.columnA)}</div>
+                </div>
+                <div class="novel-field">
+                    <div class="novel-field-label">D · 引流</div>
+                    <div class="novel-field-content short">${esc(n.columnD)}</div>
+                </div>
+                <div class="novel-field">
+                    <div class="novel-field-label">E · 选项</div>
+                    <div class="novel-field-content short">${esc(n.columnE)}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleCard(i) {
+    const body = document.getElementById('cardBody' + i);
+    const arrow = document.getElementById('arrow' + i);
+    if (body.classList.contains('open')) {
+        body.classList.remove('open');
+        arrow.textContent = '▼';
+    } else {
+        body.classList.add('open');
+        arrow.textContent = '▲';
+    }
+}
+
+function esc(s) {
+    if (!s) return '';
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ================================================
+// Export XLSX
+// ================================================
+function exportXlsx() {
+    if (novels.length === 0) return;
+    const headers = ['洗后梗', '标题', '正文', '引流', '选项'];
+    const data = [headers];
+    for (const n of novels) {
+        data.push([n.columnA, n.columnB, n.columnC, n.columnD, n.columnE]);
+    }
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{ wch: 40 }, { wch: 30 }, { wch: 100 }, { wch: 50 }, { wch: 50 }];
+    // Freeze header
+    ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+    const filename = prompt('文件名：', '终极表格') || '终极表格';
+    XLSX.writeFile(wb, filename.endsWith('.xlsx') ? filename : filename + '.xlsx');
+    toast('导出成功!', 'success');
+}
+
+// ================================================
+// Import XLSX
+// ================================================
+function importXlsx() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xlsx';
+    input.onchange = async e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            const ab = await file.arrayBuffer();
+            const wb = XLSX.read(ab);
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+            if (rows.length < 2) { toast('表格为空', 'error'); return; }
+
+            const header = rows[0].map(h => (h || '').toString().trim());
+            // Flexible header matching
+            const findCol = (...names) => {
+                for (const n of names) { const i = header.indexOf(n); if (i >= 0) return i; }
+                return -1;
+            };
+            const colA = findCol('洗后梗');
+            const colB = findCol('标题', '小说名');
+            const colC = findCol('正文');
+            const colD = findCol('引流');
+            const colE = findCol('选项');
+
+            let imported = 0;
+            for (let r = 1; r < rows.length; r++) {
+                const row = rows[r];
+                if (!row) continue;
+                const title = colB >= 0 ? (row[colB] || '').toString().trim() : '';
+                let content = colC >= 0 ? (row[colC] || '').toString().trim() : '';
+                if (!title && !content) continue;
+
+                // Auto-clean content if it still has reminder/tags
+                content = cleanContent(content);
+
+                const { char, game } = detectChar(title);
+                // If xlsx already has columnA, use it; otherwise try to rebuild from game
+                let columnA = colA >= 0 ? (row[colA] || '').toString() : '';
+                if (!columnA && game) columnA = `世界观 ${game}同人`;
+
+                novels.push({
+                    title: title,
+                    char: char,
+                    game: game,
+                    content: content,
+                    columnA: columnA,
+                    columnB: title,
+                    columnC: stripTitleFromContent(title, content),
+                    columnD: colD >= 0 ? (row[colD] || '').toString() : generatePromo(char, game),
+                    columnE: colE >= 0 ? (row[colE] || '').toString() : '',
+                });
+                imported++;
+            }
+            renderList();
+            toast(`导入了 ${imported} 篇小说`, 'success');
+        } catch (err) {
+            toast('导入失败: ' + err.message, 'error');
+        }
+    };
+    input.click();
+}
+
+// ================================================
+// AI Prompt Generation
+// ================================================
+function generatePrompt() {
+    const title = document.getElementById('fTitle').value.trim();
+    const char = document.getElementById('fChar').value;
+    const game = document.getElementById('fGame').value;
+    const content = document.getElementById('fContent').value.trim();
+    const contentSnippet = content.length > 800 ? content.substring(0, 800) + '…（全文' + content.length + '字）' : content;
+
+    const prompt = `你是国乙同人文分析专家。请阅读以下小说，按指定格式输出分析结果。
+
+【小说信息】
+标题：${title}
+游戏：${game || '未知'}
+主角：${char || '未知'}
+
+【小说正文】
+${contentSnippet}
+
+【输出格式】请严格按以下格式输出，不要加额外解释：
+
+六层梗分析：
+噱头层：[短语概括，用+连接并列元素]
+世界观层：[背景设定]
+人设层：[角色定位，用/分隔]
+情节层：[关键节点，用+连接]
+情绪层：[情绪体验，用+连接]
+结局层：[结局走向]
+
+文游选项：
+A. [主动进攻型 — 玩家主动大胆推进关系的应对方式，不是具体动作]
+B. [退缩防御型 — 玩家退缩回避防御的应对方式]
+C. [暧昧挑逗型 — 玩家暧昧挑逗试探的应对方式]
+
+注意：选项不是"拿钥匙""扔钥匙"这种具体动作，而是玩家面对这个场景时的不同应对方式，对应不同受众的XP和代入感。`;
+
+    showModal('AI 分析提示词', prompt, false);
+}
+
+// ================================================
+// Paste AI Response & Parse
+// ================================================
+function showPasteAIModal() {
+    showModal('粘贴 AI 回复', '', true);
+}
+
+let currentModalTextarea = null;
+let currentModalIsPaste = false;
+
+function showModal(title, text, isPaste) {
+    currentModalIsPaste = isPaste;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'modalOverlay';
+
+    const btnText = isPaste ? '🧠 解析并填入' : '📋 复制到剪贴板';
+    const height = isPaste ? 'rows="16"' : 'rows="12"';
+
+    overlay.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>${title}</h3>
+                <button class="btn-icon" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                ${isPaste ? '<p class="hint" style="margin-bottom:10px">将 AI 的回复粘贴到下方，点击"解析并填入"自动填好六层梗和选项</p>' : '<p class="hint" style="margin-bottom:10px">复制以下提示词发送给 AI（ChatGPT / Claude 等），获取分析结果</p>'}
+                <textarea id="modalTextarea" ${height} style="width:100%;font-size:13px">${esc(text)}</textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal()">关闭</button>
+                <button class="btn-primary" onclick="modalAction()">${btnText}</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+    currentModalTextarea = document.getElementById('modalTextarea');
+    if (!isPaste) currentModalTextarea.select();
+}
+
+function closeModal() {
+    const m = document.getElementById('modalOverlay');
+    if (m) m.remove();
+}
+
+function modalAction() {
+    const text = currentModalTextarea ? currentModalTextarea.value : '';
+    if (currentModalIsPaste) {
+        parseAIResponse(text);
+    } else {
+        navigator.clipboard.writeText(text).then(() => toast('已复制到剪贴板', 'success'));
+    }
+    closeModal();
+}
+
+function parseAIResponse(text) {
+    const data = parseAIResponseToData(text);
+    if (!data) { toast('内容为空', 'error'); return; }
+
+    // Fill form fields
+    const layerIds = ['fL1','fL2','fL3','fL4','fL5','fL6'];
+    data.layers.forEach((v, i) => { if (v) document.getElementById(layerIds[i]).value = v; });
+    if (data.optA) document.getElementById('fOptA').value = data.optA;
+    if (data.optB) document.getElementById('fOptB').value = data.optB;
+    if (data.optC) document.getElementById('fOptC').value = data.optC;
+
+    toast('已解析并填入', 'success');
+}
+
+/**
+ * 纯函数：解析 AI 回复文本，返回结构化数据（不操作 DOM）
+ */
+function parseAIResponseToData(text) {
+    if (!text || !text.trim()) return null;
+
+    const layerKeys = ['噱头层','世界观层','人设层','情节层','情绪层','结局层'];
+    const layers = layerKeys.map((key, i) => {
+        const re = new RegExp('(?:第' + (i+1) + '层·)?' + key + '[：:]\\s*(.+)', 'i');
+        const m = text.match(re);
+        return m ? m[1].trim() : '';
+    });
+
+    const optA = text.match(/[AＡ][.．:：]\s*(.+)/);
+    const optB = text.match(/[BＢ][.．:：]\s*(.+)/);
+    const optC = text.match(/[CＣ][.．:：]\s*(.+)/);
+
+    return {
+        layers,
+        optA: optA ? optA[1].trim() : '',
+        optB: optB ? optB[1].trim() : '',
+        optC: optC ? optC[1].trim() : '',
+    };
+}
+
+// ================================================
+// JSON Export / Import
+// ================================================
+function exportJson() {
+    if (novels.length === 0) { toast('没有数据可导出', 'error'); return; }
+    const json = JSON.stringify(novels, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'novels_data.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('JSON 已导出', 'success');
+}
+
+function importJson() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            if (!Array.isArray(data)) throw new Error('格式错误');
+            let imported = 0;
+            for (const n of data) {
+                if (!n.title) continue;
+                const t = n.title || '';
+                const c = n.columnC || n.content || '';
+                novels.push({
+                    title: t,
+                    char: n.char || '',
+                    game: n.game || '',
+                    content: c,
+                    columnA: n.columnA || '',
+                    columnB: n.columnB || t,
+                    columnC: stripTitleFromContent(t, c),
+                    columnD: n.columnD || '',
+                    columnE: n.columnE || '',
+                });
+                imported++;
+            }
+            renderList();
+            toast(`导入了 ${imported} 篇小说`, 'success');
+        } catch (err) {
+            toast('导入失败: ' + err.message, 'error');
+        }
+    };
+    input.click();
+}
+
+// ================================================
+// Toast
+// ================================================
+function toast(msg, type) {
+    const el = document.createElement('div');
+    el.className = `toast toast-${type || 'success'}`;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+}
+
+// ================================================
+// Init
+// ================================================
+document.addEventListener('DOMContentLoaded', () => {
+    populateCharDropdown();
+    initUpload();
+    loadApiConfig();
+    renderList();
+});
+</script>
+</body>
+</html>

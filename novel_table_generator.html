@@ -86,13 +86,15 @@
             border-radius: var(--radius-xl);
             box-shadow: var(--shadow-card);
             border: 1px solid var(--line);
-            transition: box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
             will-change: transform;
+            transform: var(--card-transform);
             overflow: hidden;
         }
         .floating-card.is-dragging {
             box-shadow: var(--shadow-card-lift);
             transform: var(--card-transform) scale(1.015) !important;
+            transition: box-shadow 0.2s ease, transform 0s !important;
             cursor: grabbing !important;
             z-index: 1000 !important;
         }
@@ -136,7 +138,7 @@
         /* ============================================
            卡片 1 · 顶部信息卡 (Header)
            ============================================ */
-        .card-header { --w: 720px; --h: 168px; left: 32px; top: 32px; width: var(--w); }
+        .card-header { --w: 720px; --h: 168px; left: 0; top: 0; width: var(--w); }
         .card-header .card-body { padding: 56px 36px 28px; }
         .header-meta {
             display: flex; align-items: center; gap: 8px;
@@ -181,7 +183,7 @@
         /* ============================================
            卡片 2 · API 配置
            ============================================ */
-        .card-api { --w: 480px; --h: auto; left: 780px; top: 32px; width: var(--w); }
+        .card-api { --w: 480px; --h: auto; left: 0; top: 0; width: var(--w); }
         .card-api .card-body { padding: 44px 24px 22px; }
         .api-trigger {
             display: flex; align-items: center; gap: 10px;
@@ -228,7 +230,7 @@
         /* ============================================
            卡片 3 · 上传区
            ============================================ */
-        .card-upload { --w: 600px; --h: 360px; left: 32px; top: 232px; width: var(--w); }
+        .card-upload { --w: 600px; --h: 360px; left: 0; top: 0; width: var(--w); }
         .card-upload .card-body { padding: 50px 32px 28px; }
 
         .upload-zone {
@@ -313,7 +315,7 @@
         /* ============================================
            卡片 4 · 编辑表单
            ============================================ */
-        .card-form { --w: 660px; --h: 520px; left: 780px; top: 232px; width: var(--w); }
+        .card-form { --w: 660px; --h: 520px; left: 0; top: 0; width: var(--w); }
         .card-form .card-body { padding: 44px 28px 24px; }
         .form-section { display: none; }
         .form-section.open { display: block; }
@@ -508,7 +510,7 @@
         /* ============================================
            卡片 5 · 小说列表
            ============================================ */
-        .card-list { --w: 920px; --h: auto; left: 32px; top: 624px; width: var(--w); }
+        .card-list { --w: 920px; --h: auto; left: 0; top: 0; width: var(--w); }
         .card-list .card-body { padding: 50px 32px 28px; }
 
         .list-header {
@@ -924,8 +926,7 @@
            ============================================ */
         @media (max-width: 1400px) {
             .card-header { width: 640px; }
-            .card-api { left: 700px; }
-            .card-form { left: 700px; width: 600px; }
+            .card-form { width: 600px; }
         }
         @media (max-width: 1200px) {
             .card-header, .card-api, .card-upload, .card-form, .card-list {
@@ -973,7 +974,7 @@
     <div class="drag-hint" id="dragHint">grab the top bar to move me</div>
 
     <!-- 卡片 1 · 顶部信息 -->
-    <div class="floating-card card-header" id="cardHeader" style="--x: 32px; --y: 32px;">
+    <div class="floating-card card-header" id="cardHeader" style="--x: 0px; --y: 0px;">
         <svg class="paper-clip" viewBox="0 0 24 48" fill="none">
             <path d="M 12 4 Q 4 4 4 12 L 4 38 Q 4 44 10 44 Q 16 44 16 38 L 16 14 Q 16 10 12 10 Q 8 10 8 14 L 8 36" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" style="color: var(--ink);"/>
         </svg>
@@ -992,11 +993,10 @@
                 <button class="btn-primary btn-sm" id="btnExport" onclick="exportXlsx()" disabled>📥 导出 Excel</button>
             </div>
         </div>
-        <div class="sticky-note" style="top: -16px; right: -24px;">不写脚本，<br>也能批量!</div>
     </div>
 
     <!-- 卡片 2 · API 配置 -->
-    <div class="floating-card card-api" id="cardApi" style="--x: 780px; --y: 32px;">
+    <div class="floating-card card-api" id="cardApi" style="--x: 0px; --y: 0px;">
         <div class="drag-handle" data-handle></div>
         <div class="card-body">
             <div class="api-trigger" onclick="toggleApiConfig()">
@@ -1038,7 +1038,7 @@
     </div>
 
     <!-- 卡片 3 · 上传区 -->
-    <div class="floating-card card-upload" id="cardUpload" style="--x: 32px; --y: 232px;">
+    <div class="floating-card card-upload" id="cardUpload" style="--x: 0px; --y: 0px;">
         <div class="drag-handle" data-handle></div>
         <div class="card-body">
             <div class="section-title" style="margin-top:0">
@@ -1067,7 +1067,7 @@
     </div>
 
     <!-- 卡片 4 · 编辑表单 (默认显示等待态，添加/编辑时切到表单) -->
-    <div class="floating-card card-form" id="cardForm" style="--x: 780px; --y: 232px;">
+    <div class="floating-card card-form" id="cardForm" style="--x: 0px; --y: 0px;">
         <div class="drag-handle" data-handle></div>
         <div class="card-body">
             <section class="form-section" id="formSection">
@@ -1179,7 +1179,7 @@
     </div>
 
     <!-- 卡片 5 · 小说列表 -->
-    <div class="floating-card card-list" id="cardList" style="--x: 32px; --y: 624px;">
+    <div class="floating-card card-list" id="cardList" style="--x: 0px; --y: 0px;">
         <div class="drag-handle" data-handle></div>
         <div class="card-body">
             <div class="list-header">
@@ -2191,10 +2191,68 @@ function toast(msg, type) {
 const CARD_LAYOUT_KEY = 'novel_gen_card_layout';
 const ALL_CARDS = ['cardHeader', 'cardApi', 'cardUpload', 'cardForm', 'cardList'];
 
+// 计算视口居中的默认布局
+// 上排：cardHeader + cardApi（两列紧贴）
+// 中排：cardUpload + cardForm（两列紧贴）
+// 下排：cardList（单列居中）
+function computeCenteredLayout() {
+    const padding = 32;
+    const colGap = 32;
+    const vw = window.innerWidth;
+    const isNarrow = vw < 1400;
+
+    // 主区域 4 张卡片宽度
+    const W = {
+        cardHeader: isNarrow ? 640 : 720,
+        cardApi: 480,
+        cardUpload: 600,
+        cardForm: isNarrow ? 600 : 660,
+        cardList: 920
+    };
+    // 上排总宽
+    const topW = W.cardHeader + colGap + W.cardApi;
+    // 中排总宽
+    const midW = W.cardUpload + colGap + W.cardForm;
+    // 主区总宽（取上/中排较宽的）
+    const mainW = Math.max(topW, midW);
+    // 列表区总宽
+    const listW = W.cardList;
+
+    // 视口不够放下 mainW 时，整体缩到能塞进视口
+    const fitW = Math.min(mainW, vw - 2 * padding);
+    const mainStartX = Math.max(padding, Math.round((vw - fitW) / 2));
+    // 上排/中排的 x 位置（统一用 mainStartX + (mainW - rowW)/2 让上下排各自居中）
+    const topStartX = mainStartX + Math.max(0, (mainW - topW) / 2);
+    const midStartX = mainStartX + Math.max(0, (mainW - midW) / 2);
+    // 列表居中
+    const listStartX = Math.max(padding, Math.round((vw - listW) / 2));
+
+    // y 方向：相对偏移（考虑各卡片实际高度 + 间距）
+    const yTop = 32;
+    const yMid = yTop + 220 + 24;  // 顶部行 ~220 + 24 间距
+    const yBot = yMid + 360 + 24;  // 中部行 ~360 + 24 间距
+
+    return {
+        cardHeader: { x: Math.round(topStartX), y: yTop },
+        cardApi:    { x: Math.round(topStartX + W.cardHeader + colGap), y: yTop },
+        cardUpload: { x: Math.round(midStartX), y: yMid },
+        cardForm:   { x: Math.round(midStartX + W.cardUpload + colGap), y: yMid },
+        cardList:   { x: listStartX, y: yBot }
+    };
+}
+
 function initCardLayout() {
     // 1. 从 localStorage 恢复位置
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem(CARD_LAYOUT_KEY) || '{}'); } catch (e) {}
+    const hasSaved = ALL_CARDS.some(id => saved[id]);
+
+    // 首次访问：用计算出的视口居中位置
+    const centered = computeCenteredLayout();
+
+    // 临时禁用所有卡片的 transition，让初始定位立即生效（不闪现动画过程）
+    const cards = ALL_CARDS.map(id => document.getElementById(id)).filter(Boolean);
+    cards.forEach(c => c.style.transition = 'none');
 
     ALL_CARDS.forEach(id => {
         const el = document.getElementById(id);
@@ -2204,13 +2262,17 @@ function initCardLayout() {
             el.style.setProperty('--x', pos.x);
             el.style.setProperty('--y', pos.y);
         } else {
-            // 首次访问：用 inline style 中预设的 --x / --y
-            const styleX = el.style.getPropertyValue('--x');
-            const styleY = el.style.getPropertyValue('--y');
-            el.style.setProperty('--x', styleX || '0px');
-            el.style.setProperty('--y', styleY || '0px');
+            const def = centered[id] || { x: 32, y: 32 };
+            el.style.setProperty('--x', def.x + 'px');
+            el.style.setProperty('--y', def.y + 'px');
         }
         applyCardPosition(el);
+    });
+
+    // 强制 reflow 后恢复 transition
+    if (cards.length) void cards[0].offsetHeight;
+    requestAnimationFrame(() => {
+        cards.forEach(c => c.style.transition = '');
     });
 
     // 2. 给每个 drag-handle 绑定拖动
@@ -2252,18 +2314,12 @@ function saveCardLayout() {
 function resetCardLayout() {
     if (!confirm('重置所有卡片到默认位置？')) return;
     localStorage.removeItem(CARD_LAYOUT_KEY);
-    const defaults = {
-        cardHeader: { x: '32px', y: '32px' },
-        cardApi: { x: '780px', y: '32px' },
-        cardUpload: { x: '32px', y: '232px' },
-        cardForm: { x: '780px', y: '232px' },
-        cardList: { x: '32px', y: '624px' },
-    };
+    const defaults = computeCenteredLayout();
     ALL_CARDS.forEach(id => {
         const el = document.getElementById(id);
         if (!el || !defaults[id]) return;
-        el.style.setProperty('--x', defaults[id].x);
-        el.style.setProperty('--y', defaults[id].y);
+        el.style.setProperty('--x', defaults[id].x + 'px');
+        el.style.setProperty('--y', defaults[id].y + 'px');
         applyCardPosition(el);
     });
     toast('布局已重置', 'success');
@@ -2274,12 +2330,19 @@ function makeDraggable(card, handle) {
     let startX, startY, origX, origY;
     let hasMoved = false;
     let pointerId = null;
+    // 拖动区高度：从卡片顶部往下 60px 都能抓住拖动
+    const DRAG_ZONE = 60;
 
-    handle.addEventListener('pointerdown', e => {
-        // 排除点击交互元素的子节点
+    // 监听绑到 card 自身：让整个顶部 60px 都能作为拖动手柄
+    card.addEventListener('pointerdown', e => {
+        // 排除点击交互元素
         if (e.target.closest('button, input, textarea, select, a, [contenteditable]')) return;
         // 小屏禁用拖动
         if (window.innerWidth < 1200) return;
+        // 仅顶部拖动区
+        const rect = card.getBoundingClientRect();
+        const yInCard = e.clientY - rect.top;
+        if (yInCard < 0 || yInCard > DRAG_ZONE) return;
 
         isDragging = true;
         hasMoved = false;
@@ -2293,7 +2356,7 @@ function makeDraggable(card, handle) {
         e.preventDefault();
     });
 
-    handle.addEventListener('pointermove', e => {
+    card.addEventListener('pointermove', e => {
         if (!isDragging) return;
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
@@ -2316,17 +2379,20 @@ function makeDraggable(card, handle) {
         if (hasMoved) saveCardLayout();
     };
 
-    handle.addEventListener('pointerup', endDrag);
-    handle.addEventListener('pointercancel', endDrag);
+    card.addEventListener('pointerup', endDrag);
+    card.addEventListener('pointercancel', endDrag);
 
     // 点击穿透：如果没移动，让 click 正常执行
-    handle.addEventListener('click', e => {
+    card.addEventListener('click', e => {
         if (hasMoved) {
             e.stopPropagation();
             e.preventDefault();
             hasMoved = false;
         }
     }, true);
+
+    // 让 handle 元素的 cursor 样式始终是 grab（视觉提示）
+    if (handle) handle.style.cursor = 'grab';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
